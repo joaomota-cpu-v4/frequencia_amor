@@ -151,3 +151,19 @@
   opacity: 1;
   transform: translateX(0);
 }
+
+/* Video CTA reveal animation */
+.cta-reveal {
+  animation: ctaFadeIn 0.7s ease-out forwards;
+}
+
+@keyframes ctaFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -16,7 +16,50 @@ import {
   X,
   Brain,
   ArrowRight,
+  Play,
+  Clock,
+  Eye,
 } from 'lucide-react';
+
+// ─── Video Progress State (shared via localStorage) ─────────────
+const STORAGE_KEY = 'vdl_video_progress';
+
+function getStoredProgress(): number {
+  try {
+    const v = localStorage.getItem(STORAGE_KEY);
+    return v ? parseFloat(v) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function storeProgress(p: number) {
+  try {
+    localStorage.setItem(STORAGE_KEY, String(p));
+  } catch {
+    // ignore
+  }
+}
+
+// ─── Shared video progress hook for CTA visibility ───────────────
+function useVideoProgress() {
+  const [progress, setProgress] = useState(getStoredProgress);
+
+  const updateProgress = useCallback((p: number) => {
+    setProgress(prev => {
+      const next = Math.max(prev, p);
+      storeProgress(next);
+      return next;
+    });
+  }, []);
+
+  // Hydrate from localStorage on mount
+  useEffect(() => {
+    setProgress(getStoredProgress());
+  }, []);
+
+  return { progress, updateProgress };
+}
 
 // ─── Intersection Observer Hook ─────────────────────────────────
 function useReveal() {
@@ -40,7 +83,7 @@ function useReveal() {
 }
 
 // ─── Sticky Mobile CTA ─────────────────────────────────────────
-function StickyCTA() {
+function StickyCTA({ ctaVisible }: { ctaVisible: boolean }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 600);
@@ -48,17 +91,19 @@ function StickyCTA() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  if (!ctaVisible) return null;
+
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 z-50 md:hidden transition-transform duration-300 ${
-        visible ? 'translate-y-0' : 'translate-y-full'
+      className={`fixed bottom-0 left-0 right-0 z-50 md:hidden transition-all duration-500 ${
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
       }`}
     >
       <div className="bg-white/95 backdrop-blur-lg border-t border-primary-100 px-4 py-3 shadow-lg">
         <a href="#oferta" className="btn-primary w-full flex">
           <span className="flex items-center gap-2">
             <Heart className="w-5 h-5" />
-            QUIERO COMENZAR AHORA
+            QUIERO COMENZAR MI EXPERIENCIA
           </span>
         </a>
       </div>
@@ -66,13 +111,66 @@ function StickyCTA() {
   );
 }
 
-// ─── SECTION 1 — HERO ──────────────────────────────────────────
-function Hero() {
+// ─── SECTION 1 — HERO WITH VSL ──────────────────────────────────
+function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress: (p: number) => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [cta1Visible, setCta1Visible] = useState(videoProgress >= 30);
+  const [cta2Visible, setCta2Visible] = useState(videoProgress >= 60);
+  const [offerVisible, setOfferVisible] = useState(videoProgress >= 90);
+
+  // Sync CTA visibility from stored progress
+  useEffect(() => {
+    setCta1Visible(videoProgress >= 30);
+    setCta2Visible(videoProgress >= 60);
+    setOfferVisible(videoProgress >= 90);
+  }, [videoProgress]);
+
+  const handleTimeUpdate = useCallback(() => {
+    const v = videoRef.current;
+    if (!v || !v.duration) return;
+    const pct = (v.currentTime / v.duration) * 100;
+    setCurrentTime(v.currentTime);
+    onProgress(pct);
+
+    if (pct >= 30 && !cta1Visible) setCta1Visible(true);
+    if (pct >= 60 && !cta2Visible) setCta2Visible(true);
+    if (pct >= 90 && !offerVisible) setOfferVisible(true);
+  }, [onProgress, cta1Visible, cta2Visible, offerVisible]);
+
+  const handleLoadedMetadata = useCallback(() => {
+    const v = videoRef.current;
+    if (v?.duration) setDuration(v.duration);
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.play();
+      setPlaying(true);
+    } else {
+      v.pause();
+      setPlaying(false);
+    }
+  }, []);
+
+  const formatTime = (t: number) => {
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
+
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden">
+    <section className="relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-rose-25 via-primary-50 to-white" />
-      <div className="absolute inset-0 opacity-[0.03]"
+      <div
+        className="absolute inset-0 opacity-[0.03]"
         style={{
           backgroundImage: 'radial-gradient(circle at 1px 1px, #E91E63 1px, transparent 0)',
           backgroundSize: '40px 40px',
@@ -82,144 +180,210 @@ function Hero() {
       <div className="absolute top-20 right-10 w-72 h-72 bg-primary-200/30 rounded-full blur-3xl animate-float" />
       <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary-100/40 rounded-full blur-3xl animate-float animate-delay-200" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left content */}
-          <div className="text-center lg:text-left">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-primary-100 mb-6 animate-fade-up">
-              <Sparkles className="w-4 h-4 text-primary-500" />
-              <span className="text-sm font-medium text-primary-600 font-heading">
-                Programa Guiado de 30 Dias
-              </span>
-            </div>
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 md:pt-20 pb-16 md:pb-24">
+        {/* Headline block */}
+        <div className="text-center mb-10 md:mb-12">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-primary-100 mb-6 animate-fade-up">
+            <Sparkles className="w-4 h-4 text-primary-500" />
+            <span className="text-sm font-medium text-primary-600 font-heading">
+              Programa Guiado de 30 Dias
+            </span>
+          </div>
 
-            {/* Headline */}
-            <h1 className="font-heading font-bold text-3xl sm:text-4xl md:text-5xl lg:text-[3.4rem] leading-[1.15] text-dark mb-6 animate-fade-up animate-delay-100">
-              Existe una razon por la que algunas personas{' '}
-              <span className="gradient-text">atraen el amor</span> con facilidad...
-            </h1>
+          <h1 className="font-heading font-bold text-3xl sm:text-4xl md:text-5xl leading-[1.15] text-dark mb-5 animate-fade-up animate-delay-100">
+            Existe una razon por la que algunas personas{' '}
+            <span className="gradient-text">atraen el amor</span> con facilidad...
+          </h1>
 
-            <p className="text-lg md:text-xl text-muted leading-relaxed mb-4 animate-fade-up animate-delay-200 max-w-xl mx-auto lg:mx-0">
-              Mientras otras parecen repetir los mismos ciclos de rechazo, distancia y relaciones frustradas.
-            </p>
+          <p className="text-lg md:text-xl text-muted leading-relaxed mb-2 animate-fade-up animate-delay-200 max-w-2xl mx-auto">
+            Mientras otras parecen repetir los mismos ciclos de rechazo, distancia y relaciones frustradas.
+          </p>
+        </div>
 
-            <p className="text-base md:text-lg text-dark/70 leading-relaxed mb-8 animate-fade-up animate-delay-300 max-w-xl mx-auto lg:mx-0">
-              Descubre el <strong className="text-primary-600">Metodo Vibracion del Amor™</strong>, un programa guiado de 30 dias con frecuencias sonoras para escuchar por la manana y antes de dormir.
-            </p>
-
-            {/* CTA */}
-            <div className="animate-fade-up animate-delay-400">
-              <a href="#oferta" className="btn-primary text-lg px-10 py-5 mb-6 inline-flex">
-                <span className="flex items-center gap-2">
-                  <Heart className="w-5 h-5" />
-                  QUIERO COMENZAR AHORA
-                </span>
-              </a>
-            </div>
-
-            {/* Trust indicators */}
-            <div className="animate-fade-up animate-delay-500">
-              <div className="flex items-center justify-center lg:justify-start gap-1 mb-2">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                ))}
+        {/* Info box */}
+        <div className="max-w-3xl mx-auto mb-8 animate-fade-up animate-delay-300">
+          <div className="bg-gradient-to-br from-primary-50/90 to-white rounded-2xl p-5 md:p-7 border border-primary-100/60 shadow-lg shadow-primary-500/5">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="w-5 h-5 text-primary-500" />
               </div>
-              <p className="text-sm text-muted">
-                Mas de <strong className="text-dark">5.000 mujeres</strong> ya han iniciado esta experiencia
-              </p>
+              <div>
+                <h3 className="font-heading font-bold text-dark text-base md:text-lg mb-2">
+                  IMPORTANTE
+                </h3>
+                <p className="text-dark/80 leading-relaxed text-sm md:text-base mb-4">
+                  Antes de comenzar tu experiencia de 30 dias, mira esta breve presentacion.
+                  En menos de 5 minutos descubriras como funciona el Metodo Vibracion del Amor™
+                  y por que miles de mujeres utilizan frecuencias sonoras para elevar su vibracion amorosa.
+                </p>
+                <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-dark/70">
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-primary-500" />
+                    Duracion: aproximadamente 5 minutos
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Heart className="w-4 h-4 text-primary-500" />
+                    Como funciona el metodo
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Headphones className="w-4 h-4 text-primary-500" />
+                    Como utilizar las frecuencias correctamente
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-primary-500" />
+                    Que esperar durante los proximos 30 dias
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Video player */}
+        <div className="max-w-4xl mx-auto animate-fade-up animate-delay-400">
+          {/* Floating labels */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-primary-100 text-xs font-heading font-semibold text-dark">
+              <Eye className="w-3.5 h-3.5 text-primary-500" />
+              Presentacion Exclusiva
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-primary-100 text-xs font-heading font-semibold text-dark">
+              <Clock className="w-3.5 h-3.5 text-primary-500" />
+              5 Minutos
+            </span>
+          </div>
+
+          {/* Video container */}
+          <div className="relative rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl shadow-primary-500/10 bg-dark">
+            {/* Glow ring */}
+            <div className="absolute -inset-1 bg-gradient-to-br from-primary-300/30 via-primary-500/20 to-primary-300/30 rounded-2xl md:rounded-3xl blur-md -z-10" />
+
+            {/* Video element — replace src with real VSL URL */}
+            <video
+              ref={videoRef}
+              className="w-full aspect-video bg-dark"
+              src=""
+              poster=""
+              preload="metadata"
+              playsInline
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onEnded={() => { setPlaying(false); onProgress(100); }}
+            />
+
+            {/* Custom play overlay (shown when paused & at start) */}
+            {!playing && currentTime === 0 && (
+              <button
+                onClick={togglePlay}
+                className="absolute inset-0 flex items-center justify-center bg-dark/40 transition-colors hover:bg-dark/30"
+              >
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-2xl shadow-primary-500/40 transition-transform hover:scale-105">
+                  <Play className="w-8 h-8 md:w-10 md:h-10 text-white ml-1" />
+                </div>
+              </button>
+            )}
+
+            {/* Click-to-play/pause overlay (during playback) */}
+            {playing && (
+              <button
+                onClick={togglePlay}
+                className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center"
+                aria-label="Pausar video"
+              >
+                <div className="w-16 h-16 rounded-full bg-dark/50 flex items-center justify-center">
+                  <div className="flex gap-2">
+                    <div className="w-3 h-8 bg-white rounded-sm" />
+                    <div className="w-3 h-8 bg-white rounded-sm" />
+                  </div>
+                </div>
+              </button>
+            )}
+          </div>
+
+          {/* Progress bar below video */}
+          <div className="mt-3 flex items-center gap-3">
+            <span className="text-xs text-muted font-medium tabular-nums">{formatTime(currentTime)}</span>
+            <div className="flex-1 h-1.5 bg-primary-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-primary-400 to-primary-500 rounded-full transition-[width] duration-300"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <span className="text-xs text-muted font-medium tabular-nums">{formatTime(duration)}</span>
+          </div>
+
+          {/* CTA 1 — fades in at 30% */}
+          <div
+            className={`mt-8 transition-all duration-700 ${
+              cta1Visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+            }`}
+          >
+            <a href="#oferta" className="btn-primary text-lg px-10 py-5 w-full sm:w-auto inline-flex justify-center">
+              <span className="flex items-center gap-2">
+                <Heart className="w-5 h-5" />
+                QUIERO COMENZAR MI EXPERIENCIA
+              </span>
+            </a>
+          </div>
+
+          {/* CTA 2 — fades in at 60% */}
+          <div
+            className={`mt-4 transition-all duration-700 ${
+              cta2Visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+            }`}
+          >
+            <a href="#oferta" className="inline-flex items-center gap-2 text-primary-500 font-heading font-semibold hover:text-primary-700 transition-colors text-base">
+              <ArrowRight className="w-4 h-4" />
+              Si, quiero acceder ahora por solo US$17
+            </a>
+          </div>
+
+          {/* Offer card — revealed at 90% */}
+          <div
+            className={`mt-8 transition-all duration-700 ${
+              offerVisible ? 'opacity-100 translate-y-0 max-h-[500px]' : 'opacity-0 translate-y-4 max-h-0 pointer-events-none overflow-hidden'
+            }`}
+          >
+            <div className="bg-white rounded-2xl p-6 md:p-8 border border-primary-200/60 shadow-xl shadow-primary-500/10">
+              <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+                <div>
+                  <p className="text-muted text-sm">Oferta especial — Solo hoy</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-muted line-through text-xl font-heading">US$67</span>
+                    <span className="text-primary-500 font-heading font-extrabold text-3xl">US$17</span>
+                    <span className="bg-primary-100 text-primary-600 text-xs font-heading font-bold px-2 py-0.5 rounded-full">
+                      -75%
+                    </span>
+                  </div>
+                </div>
+                <a href="#oferta" className="btn-primary px-6 py-3 inline-flex">
+                  <span className="flex items-center gap-2 text-sm">
+                    <Heart className="w-4 h-4" />
+                    ACCEDER AHORA
+                  </span>
+                </a>
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs text-muted">
+                <span className="flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-primary-500" /> Pago Seguro</span>
+                <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5 text-primary-500" /> Acceso Inmediato</span>
+                <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5 text-primary-500" /> Garantia 30 Dias</span>
+              </div>
             </div>
           </div>
 
-          {/* Right - Phone mockup */}
-          <div className="relative flex justify-center lg:justify-end animate-fade-in animate-delay-300">
-            <div className="relative">
-              {/* Phone */}
-              <div className="relative w-[280px] sm:w-[300px] animate-float">
-                <div className="bg-dark rounded-[3rem] p-3 shadow-2xl">
-                  <div className="bg-gradient-to-b from-primary-50 to-white rounded-[2.4rem] overflow-hidden">
-                    {/* Status bar */}
-                    <div className="flex justify-between items-center px-6 pt-3 pb-2">
-                      <span className="text-[10px] font-medium text-dark/60">9:41</span>
-                      <div className="flex gap-1">
-                        <div className="w-3 h-2 bg-dark/30 rounded-sm" />
-                        <div className="w-3 h-2 bg-dark/30 rounded-sm" />
-                        <div className="w-4 h-2 bg-dark/30 rounded-sm" />
-                      </div>
-                    </div>
-                    {/* App content */}
-                    <div className="px-5 pb-6 pt-2">
-                      <div className="text-center mb-4">
-                        <Heart className="w-8 h-8 text-primary-500 mx-auto mb-2" />
-                        <p className="text-xs font-heading font-semibold text-dark">Frecuencia Matutina</p>
-                        <p className="text-[10px] text-muted">Dia 7 — Liberacion Emocional</p>
-                      </div>
-                      {/* Waveform visualizer */}
-                      <div className="flex items-end justify-center gap-[3px] h-16 mb-4">
-                        {[3, 8, 14, 20, 26, 30, 26, 20, 14, 8, 3, 8, 14, 20, 26, 30, 26, 20, 14, 8, 3, 6, 12, 18, 22, 26, 22, 18, 12, 6].map((h, i) => (
-                          <div
-                            key={i}
-                            className="w-[3px] rounded-full bg-gradient-to-t from-primary-300 to-primary-500"
-                            style={{ height: `${h * 1.6}px` }}
-                          />
-                        ))}
-                      </div>
-                      {/* Play button */}
-                      <div className="flex items-center justify-center gap-4">
-                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                          <div className="w-0 h-0 border-l-[6px] border-l-primary-500 border-y-[4px] border-y-transparent ml-0.5" />
-                        </div>
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
-                          <div className="w-0 h-0 border-l-[8px] border-l-white border-y-[5px] border-y-transparent ml-0.5" />
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                          <div className="flex gap-[2px]">
-                            <div className="w-[3px] h-3 bg-primary-500 rounded-sm" />
-                            <div className="w-[3px] h-3 bg-primary-500 rounded-sm" />
-                          </div>
-                        </div>
-                      </div>
-                      {/* Progress bar */}
-                      <div className="mt-4 flex items-center gap-2">
-                        <span className="text-[9px] text-muted">4:32</span>
-                        <div className="flex-1 h-1 bg-primary-100 rounded-full overflow-hidden">
-                          <div className="w-[65%] h-full bg-gradient-to-r from-primary-400 to-primary-500 rounded-full" />
-                        </div>
-                        <span className="text-[9px] text-muted">7:00</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Glow behind phone */}
-                <div className="absolute -inset-8 bg-primary-200/30 rounded-full blur-3xl -z-10" />
-              </div>
-
-              {/* Floating badge */}
-              <div className="absolute -left-4 top-1/4 glass-card px-3 py-2 shadow-lg animate-fade-up animate-delay-500">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                    <Heart className="w-4 h-4 text-primary-500" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-heading font-semibold text-dark">Vibracion</p>
-                    <p className="text-[9px] text-primary-500">528 Hz</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating stats */}
-              <div className="absolute -right-2 bottom-1/4 glass-card px-3 py-2 shadow-lg animate-fade-up animate-delay-400">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                    <Check className="w-4 h-4 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-heading font-semibold text-dark">Dia 7</p>
-                    <p className="text-[9px] text-green-600">Completado</p>
-                  </div>
-                </div>
-              </div>
+          {/* Trust indicators */}
+          <div className="mt-8 text-center animate-fade-up animate-delay-500">
+            <div className="flex items-center justify-center gap-1 mb-2">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+              ))}
             </div>
+            <p className="text-sm text-muted">
+              Mas de <strong className="text-dark">5.000 mujeres</strong> ya han iniciado esta experiencia
+            </p>
           </div>
         </div>
       </div>
@@ -929,9 +1093,11 @@ function Footer() {
 
 // ─── MAIN APP ────────────────────────────────────────────────────
 function App() {
+  const { progress, updateProgress } = useVideoProgress();
+
   return (
     <div className="min-h-screen bg-rose-25">
-      <Hero />
+      <Hero videoProgress={progress} onProgress={updateProgress} />
       <Problem />
       <HowItWorks />
       <Journey />
@@ -940,7 +1106,7 @@ function App() {
       <Offer />
       <FAQ />
       <Footer />
-      <StickyCTA />
+      <StickyCTA ctaVisible={progress >= 30} />
     </div>
   );
 }
