@@ -282,11 +282,11 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
             {/* Glow ring */}
             <div className="absolute -inset-1 bg-gradient-to-br from-primary-300/30 via-primary-500/20 to-primary-300/30 rounded-2xl md:rounded-3xl blur-md -z-10" />
 
-            {/* Vimeo iframe — responsive wrapper */}
-            <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+            {/* Vimeo iframe — responsive wrapper (4:3 aspect ratio) */}
+            <div className="relative w-full" style={{ paddingTop: '75%' }}>
               <iframe
                 ref={iframeRef}
-                src="https://player.vimeo.com/video/1203521560?badge=0&autopause=0&player_id=0&app_id=58479"
+                src="https://player.vimeo.com/video/1203521560?badge=0&autopause=0&player_id=0&app_id=58479&title=0&byline=0&portrait=0&controls=0"
                 className="absolute inset-0 w-full h-full"
                 frameBorder="0"
                 allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
