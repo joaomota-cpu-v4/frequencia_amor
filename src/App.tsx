@@ -111,10 +111,10 @@ function StickyCTA({ ctaVisible }: { ctaVisible: boolean }) {
   );
 }
 
-// ─── SECTION 1 — HERO WITH VSL ──────────────────────────────────
+// ─── SECTION 1 — HERO WITH VSL (Vimeo) ──────────────────────────
 function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress: (p: number) => void }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const playerRef = useRef<any>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [cta1Visible, setCta1Visible] = useState(videoProgress >= 30);
@@ -128,32 +128,55 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
     setOfferVisible(videoProgress >= 90);
   }, [videoProgress]);
 
-  const handleTimeUpdate = useCallback(() => {
-    const v = videoRef.current;
-    if (!v || !v.duration) return;
-    const pct = (v.currentTime / v.duration) * 100;
-    setCurrentTime(v.currentTime);
-    onProgress(pct);
+  const [showOverlay, setShowOverlay] = useState(true);
 
-    if (pct >= 30 && !cta1Visible) setCta1Visible(true);
-    if (pct >= 60 && !cta2Visible) setCta2Visible(true);
-    if (pct >= 90 && !offerVisible) setOfferVisible(true);
+  // Initialize Vimeo Player
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe || playerRef.current) return;
+
+    const init = () => {
+      const Vimeo = (window as any).Vimeo;
+      if (!Vimeo || !Vimeo.Player) return;
+      const player = new Vimeo.Player(iframe);
+      playerRef.current = player;
+
+      player.getDuration().then((d: number) => setDuration(d));
+
+      player.on('timeupdate', (data: { seconds: number; duration: number; percent: number }) => {
+        const pct = data.percent * 100;
+        setCurrentTime(data.seconds);
+        onProgress(pct);
+
+        if (pct >= 30 && !cta1Visible) setCta1Visible(true);
+        if (pct >= 60 && !cta2Visible) setCta2Visible(true);
+        if (pct >= 90 && !offerVisible) setOfferVisible(true);
+      });
+
+      player.on('ended', () => {
+        onProgress(100);
+      });
+
+      player.on('play', () => {
+        setShowOverlay(false);
+      });
+    };
+
+    if ((window as any).Vimeo) {
+      init();
+    } else {
+      const onLoad = () => init();
+      window.addEventListener('load', onLoad);
+      return () => window.removeEventListener('load', onLoad);
+    }
   }, [onProgress, cta1Visible, cta2Visible, offerVisible]);
 
-  const handleLoadedMetadata = useCallback(() => {
-    const v = videoRef.current;
-    if (v?.duration) setDuration(v.duration);
-  }, []);
-
-  const togglePlay = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) {
-      v.play();
-      setPlaying(true);
+  const handleOverlayClick = useCallback(() => {
+    const player = playerRef.current;
+    if (player) {
+      player.play().then(() => setShowOverlay(false)).catch(() => setShowOverlay(false));
     } else {
-      v.pause();
-      setPlaying(false);
+      setShowOverlay(false);
     }
   }, []);
 
@@ -259,48 +282,30 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
             {/* Glow ring */}
             <div className="absolute -inset-1 bg-gradient-to-br from-primary-300/30 via-primary-500/20 to-primary-300/30 rounded-2xl md:rounded-3xl blur-md -z-10" />
 
-            {/* Video element — replace src with real VSL URL */}
-            <video
-              ref={videoRef}
-              className="w-full aspect-video bg-dark"
-              src=""
-              poster=""
-              preload="metadata"
-              playsInline
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onPlay={() => setPlaying(true)}
-              onPause={() => setPlaying(false)}
-              onEnded={() => { setPlaying(false); onProgress(100); }}
-            />
-
-            {/* Custom play overlay (shown when paused & at start) */}
-            {!playing && currentTime === 0 && (
-              <button
-                onClick={togglePlay}
-                className="absolute inset-0 flex items-center justify-center bg-dark/40 transition-colors hover:bg-dark/30"
-              >
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-2xl shadow-primary-500/40 transition-transform hover:scale-105">
-                  <Play className="w-8 h-8 md:w-10 md:h-10 text-white ml-1" />
-                </div>
-              </button>
-            )}
-
-            {/* Click-to-play/pause overlay (during playback) */}
-            {playing && (
-              <button
-                onClick={togglePlay}
-                className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center"
-                aria-label="Pausar video"
-              >
-                <div className="w-16 h-16 rounded-full bg-dark/50 flex items-center justify-center">
-                  <div className="flex gap-2">
-                    <div className="w-3 h-8 bg-white rounded-sm" />
-                    <div className="w-3 h-8 bg-white rounded-sm" />
+            {/* Vimeo iframe — responsive wrapper */}
+            <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+              <iframe
+                ref={iframeRef}
+                src="https://player.vimeo.com/video/1203521560?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1"
+                className="absolute inset-0 w-full h-full"
+                frameBorder="0"
+                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                title="vsl"
+              />
+              {/* Play overlay for mobile (autoplay blocked) */}
+              {showOverlay && (
+                <button
+                  onClick={handleOverlayClick}
+                  className="absolute inset-0 flex items-center justify-center bg-dark/50 transition-colors hover:bg-dark/40 z-10"
+                  aria-label="Reproducir video"
+                >
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-2xl shadow-primary-500/40 transition-transform hover:scale-105">
+                    <Play className="w-8 h-8 md:w-10 md:h-10 text-white ml-1" />
                   </div>
-                </div>
-              </button>
-            )}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Progress bar below video */}
