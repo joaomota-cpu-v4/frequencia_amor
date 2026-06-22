@@ -286,7 +286,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
             <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
               <iframe
                 ref={iframeRef}
-                src="https://player.vimeo.com/video/1203521560?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1"
+                src="https://player.vimeo.com/video/1203521560?badge=0&autopause=0&player_id=0&app_id=58479"
                 className="absolute inset-0 w-full h-full"
                 frameBorder="0"
                 allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
@@ -374,7 +374,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
               <div className="flex flex-wrap gap-3 text-xs text-muted">
                 <span className="flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-primary-500" /> Pago Seguro</span>
                 <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5 text-primary-500" /> Acceso Inmediato</span>
-                <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5 text-primary-500" /> Garantia 30 Dias</span>
+                <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5 text-primary-500" /> Garantia 7 Dias</span>
               </div>
             </div>
           </div>
@@ -967,7 +967,7 @@ function Offer() {
               </div>
               <div className="flex items-center gap-2 text-muted text-sm">
                 <Shield className="w-4 h-4 text-primary-500" />
-                <span>Garantia de 30 Dias</span>
+                <span>Garantia de 7 Dias</span>
               </div>
             </div>
 
@@ -977,10 +977,10 @@ function Offer() {
                 <Shield className="w-8 h-8 text-white" />
               </div>
               <h4 className="font-heading font-bold text-dark text-lg mb-2">
-                Garantia de 30 dias
+                Garantia de 7 dias
               </h4>
               <p className="text-muted text-sm max-w-md mx-auto leading-relaxed">
-                Si en 30 dias no sientes un cambio real en tu vibracion emocional, te devolvemos tu dinero. Sin preguntas. Sin complicaciones.
+                Si en 7 dias no sientes un cambio real en tu vibracion emocional, te devolvemos tu dinero. Sin preguntas. Sin complicaciones.
               </p>
             </div>
           </div>
@@ -1014,7 +1014,7 @@ function FAQ() {
     },
     {
       q: 'Tengo garantia?',
-      a: 'Si, tienes una garantia de 30 dias. Si no sientes un cambio real en tu vibracion emocional, te devolvemos el 100% de tu inversion sin preguntas.',
+      a: 'Si, tienes una garantia de 7 dias. Si no sientes un cambio real en tu vibracion emocional, te devolvemos el 100% de tu inversion sin preguntas.',
     },
   ];
 
