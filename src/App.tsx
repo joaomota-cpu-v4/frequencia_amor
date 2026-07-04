@@ -272,13 +272,16 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
             {/* Glow ring */}
             <div className="absolute -inset-1 bg-gradient-to-br from-primary-300/30 via-primary-500/20 to-primary-300/30 rounded-2xl md:rounded-3xl blur-md -z-10" />
 
-            {/* ConverteAI VSL SmartPlayer (4:3 aspect ratio) */}
-            <div className="relative w-full" style={{ paddingTop: '75%' }}>
+            {/* Vturb SmartPlayer (4:3 aspect ratio) */}
+            <vturb-smartplayer
+              id="vid-6a44756079ce81d83fc3a246"
+              style={{ display: 'block', margin: '0 auto', width: '100%' }}
+            >
               <div
-                id="vid-6a44756079ce81d83fc3a246"
-                className="absolute inset-0 w-full h-full"
+                className="vturb-player-placeholder"
+                style={{ position: 'relative', width: '100%', paddingTop: '75%', zIndex: 0, backgroundColor: 'black' }}
               />
-            </div>
+            </vturb-smartplayer>
           </div>
 
           {/* Progress bar below video */}
@@ -315,7 +318,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
           >
             <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackLead()} className="inline-flex items-center gap-2 text-primary-500 font-heading font-semibold hover:text-primary-700 transition-colors text-base">
               <ArrowRight className="w-4 h-4" />
-              Si, quiero acceder ahora por solo US$17
+              Si, quiero acceder ahora por solo US$15,90
             </a>
           </div>
 
@@ -331,7 +334,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
                   <p className="text-muted text-sm">Oferta especial — Solo hoy</p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-muted line-through text-xl font-heading">US$67</span>
-                    <span className="text-primary-500 font-heading font-extrabold text-3xl">US$17</span>
+                    <span className="text-primary-500 font-heading font-extrabold text-3xl">US$15,90</span>
                     <span className="bg-primary-100 text-primary-600 text-xs font-heading font-bold px-2 py-0.5 rounded-full">
                       -75%
                     </span>
@@ -897,7 +900,7 @@ function Offer() {
               <div className="flex items-center justify-center gap-3 mb-2">
                 <span className="text-muted line-through text-2xl font-heading">US$67</span>
                 <span className="text-primary-500 font-heading font-extrabold text-5xl md:text-6xl">
-                  US$17
+                  US$15,90
                 </span>
               </div>
               <p className="text-primary-500 font-heading font-semibold">
@@ -924,7 +927,7 @@ function Offer() {
             <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackLead()} className="btn-primary w-full text-lg py-5 flex mb-6 animate-pulse-glow">
               <span className="flex items-center justify-center gap-2">
                 <Heart className="w-5 h-5" />
-                QUIERO COMENZAR AHORA — US$17
+                QUIERO COMENZAR AHORA — US$15,90
               </span>
             </a>
 

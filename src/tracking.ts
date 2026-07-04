@@ -3,12 +3,6 @@
 
 const PIXEL_IDS = ['457573061386079', '280093672683803', '3419148448260520'];
 
-declare global {
-  interface Window {
-    fbq?: (...args: any[]) => void;
-  }
-}
-
 function getCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? match[2] : null;
@@ -83,7 +77,7 @@ export async function trackLead() {
   // Fire Lead for each pixel explicitly (fbq with multiple pixel IDs)
   PIXEL_IDS.forEach((pixelId) => {
     fbq('trackSingle', pixelId, 'Lead', {
-      value: 17,
+      value: 15.90,
       currency: 'USD',
       content_name: 'Metodo Vibracion del Amor',
     }, { eventID: `lead_${externalId}_${Date.now()}` });
