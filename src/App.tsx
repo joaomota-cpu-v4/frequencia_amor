@@ -120,6 +120,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
   const [cta1Visible, setCta1Visible] = useState(videoProgress >= 30);
   const [cta2Visible, setCta2Visible] = useState(videoProgress >= 60);
   const [offerVisible, setOfferVisible] = useState(videoProgress >= 90);
+  const [socialProofVisible, setSocialProofVisible] = useState(false);
   const playerInitialized = useRef(false);
 
   // Sync CTA visibility from stored progress
@@ -128,6 +129,10 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
     setCta2Visible(videoProgress >= 60);
     setOfferVisible(videoProgress >= 90);
   }, [videoProgress]);
+
+  useEffect(() => {
+    setSocialProofVisible(currentTime >= 90);
+  }, [currentTime]);
 
   // Initialize ConverteAI SmartPlayer tracking
   useEffect(() => {
@@ -161,6 +166,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
         if (percentage >= 30) setCta1Visible(true);
         if (percentage >= 60) setCta2Visible(true);
         if (percentage >= 90) setOfferVisible(true);
+        if (seconds >= 90) setSocialProofVisible(true);
       };
 
       handleEnded = () => onProgress(100);
@@ -360,7 +366,11 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
           </div>
 
           {/* Trust indicators */}
-          <div className="mt-8 text-center animate-fade-up animate-delay-500">
+          <div
+            className={`mt-8 text-center transition-all duration-700 ${
+              socialProofVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+            }`}
+          >
             <div className="flex items-center justify-center gap-1 mb-2">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
