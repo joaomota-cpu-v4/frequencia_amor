@@ -20,6 +20,9 @@ import {
   Clock,
   Eye,
 } from 'lucide-react';
+import { trackLead } from './tracking';
+
+const HOTMART_URL = 'https://pay.hotmart.com/B106469520T?checkoutMode=10';
 
 // ─── Video Progress State (shared via localStorage) ─────────────
 const STORAGE_KEY = 'vdl_video_progress';
@@ -100,7 +103,7 @@ function StickyCTA({ ctaVisible }: { ctaVisible: boolean }) {
       }`}
     >
       <div className="bg-white/95 backdrop-blur-lg border-t border-primary-100 px-4 py-3 shadow-lg">
-        <a href="#oferta" className="btn-primary w-full flex">
+        <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackLead()} className="btn-primary w-full flex">
           <span className="flex items-center gap-2">
             <Heart className="w-5 h-5" />
             QUIERO COMENZAR MI EXPERIENCIA
@@ -111,10 +114,8 @@ function StickyCTA({ ctaVisible }: { ctaVisible: boolean }) {
   );
 }
 
-// ─── SECTION 1 — HERO WITH VSL (Vimeo) ──────────────────────────
+// ─── SECTION 1 — HERO WITH VSL (ConverteAI SmartPlayer) ──────────────────────────
 function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress: (p: number) => void }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const playerRef = useRef<any>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [cta1Visible, setCta1Visible] = useState(videoProgress >= 30);
@@ -128,24 +129,20 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
     setOfferVisible(videoProgress >= 90);
   }, [videoProgress]);
 
-  const [showOverlay, setShowOverlay] = useState(true);
-
-  // Initialize Vimeo Player
+  // Initialize ConverteAI SmartPlayer tracking
   useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe || playerRef.current) return;
+    const PLAYER_ID = 'vid-6a44756079ce81d83fc3a246';
 
-    const init = () => {
-      const Vimeo = (window as any).Vimeo;
-      if (!Vimeo || !Vimeo.Player) return;
-      const player = new Vimeo.Player(iframe);
-      playerRef.current = player;
+    const initPlayer = () => {
+      const sp = (window as any).smartplayer;
+      if (!sp) return;
+      const player = sp.instances?.[PLAYER_ID];
+      if (!player) return;
 
-      player.getDuration().then((d: number) => setDuration(d));
-
-      player.on('timeupdate', (data: { seconds: number; duration: number; percent: number }) => {
-        const pct = data.percent * 100;
-        setCurrentTime(data.seconds);
+      // Track progress via SmartPlayer events
+      player.on('timeupdate', (data: any) => {
+        const pct = data.percent ? data.percent * 100 : 0;
+        setCurrentTime(data.seconds || 0);
         onProgress(pct);
 
         if (pct >= 30 && !cta1Visible) setCta1Visible(true);
@@ -157,28 +154,21 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
         onProgress(100);
       });
 
-      player.on('play', () => {
-        setShowOverlay(false);
-      });
+      if (player.getDuration) {
+        player.getDuration().then((d: number) => setDuration(d));
+      }
     };
 
-    if ((window as any).Vimeo) {
-      init();
-    } else {
-      const onLoad = () => init();
-      window.addEventListener('load', onLoad);
-      return () => window.removeEventListener('load', onLoad);
-    }
-  }, [onProgress, cta1Visible, cta2Visible, offerVisible]);
+    // SmartPlayer loads asynchronously
+    const timer = setInterval(() => {
+      if ((window as any).smartplayer) {
+        initPlayer();
+        clearInterval(timer);
+      }
+    }, 500);
 
-  const handleOverlayClick = useCallback(() => {
-    const player = playerRef.current;
-    if (player) {
-      player.play().then(() => setShowOverlay(false)).catch(() => setShowOverlay(false));
-    } else {
-      setShowOverlay(false);
-    }
-  }, []);
+    return () => clearInterval(timer);
+  }, [onProgress, cta1Visible, cta2Visible, offerVisible]);
 
   const formatTime = (t: number) => {
     const m = Math.floor(t / 60);
@@ -282,29 +272,12 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
             {/* Glow ring */}
             <div className="absolute -inset-1 bg-gradient-to-br from-primary-300/30 via-primary-500/20 to-primary-300/30 rounded-2xl md:rounded-3xl blur-md -z-10" />
 
-            {/* Vimeo iframe — responsive wrapper (4:3 aspect ratio) */}
+            {/* ConverteAI VSL SmartPlayer (4:3 aspect ratio) */}
             <div className="relative w-full" style={{ paddingTop: '75%' }}>
-              <iframe
-                ref={iframeRef}
-                src="https://player.vimeo.com/video/1203521560?badge=0&autopause=0&player_id=0&app_id=58479&title=0&byline=0&portrait=0&controls=0"
+              <div
+                id="vid-6a44756079ce81d83fc3a246"
                 className="absolute inset-0 w-full h-full"
-                frameBorder="0"
-                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                title="vsl"
               />
-              {/* Play overlay for mobile (autoplay blocked) */}
-              {showOverlay && (
-                <button
-                  onClick={handleOverlayClick}
-                  className="absolute inset-0 flex items-center justify-center bg-dark/50 transition-colors hover:bg-dark/40 z-10"
-                  aria-label="Reproducir video"
-                >
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-2xl shadow-primary-500/40 transition-transform hover:scale-105">
-                    <Play className="w-8 h-8 md:w-10 md:h-10 text-white ml-1" />
-                  </div>
-                </button>
-              )}
             </div>
           </div>
 
@@ -326,7 +299,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
               cta1Visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
             }`}
           >
-            <a href="#oferta" className="btn-primary text-lg px-10 py-5 w-full sm:w-auto inline-flex justify-center">
+            <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackLead()} className="btn-primary text-lg px-10 py-5 w-full sm:w-auto inline-flex justify-center">
               <span className="flex items-center gap-2">
                 <Heart className="w-5 h-5" />
                 QUIERO COMENZAR MI EXPERIENCIA
@@ -340,7 +313,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
               cta2Visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
             }`}
           >
-            <a href="#oferta" className="inline-flex items-center gap-2 text-primary-500 font-heading font-semibold hover:text-primary-700 transition-colors text-base">
+            <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackLead()} className="inline-flex items-center gap-2 text-primary-500 font-heading font-semibold hover:text-primary-700 transition-colors text-base">
               <ArrowRight className="w-4 h-4" />
               Si, quiero acceder ahora por solo US$17
             </a>
@@ -364,7 +337,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
                     </span>
                   </div>
                 </div>
-                <a href="#oferta" className="btn-primary px-6 py-3 inline-flex">
+                <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackLead()} className="btn-primary px-6 py-3 inline-flex">
                   <span className="flex items-center gap-2 text-sm">
                     <Heart className="w-4 h-4" />
                     ACCEDER AHORA
@@ -948,7 +921,7 @@ function Offer() {
             </div>
 
             {/* CTA */}
-            <a href="#" className="btn-primary w-full text-lg py-5 flex mb-6 animate-pulse-glow">
+            <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackLead()} className="btn-primary w-full text-lg py-5 flex mb-6 animate-pulse-glow">
               <span className="flex items-center justify-center gap-2">
                 <Heart className="w-5 h-5" />
                 QUIERO COMENZAR AHORA — US$17
