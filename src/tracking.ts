@@ -63,27 +63,26 @@ export async function trackLead() {
   const fbc = getFbc();
   const fbp = getFbp();
   const externalId = getExternalId();
-  const geo = await getGeolocation();
-
-  const userData: Record<string, any> = {
+  const userData: Record<string, unknown> = {
     external_id: externalId,
   };
   if (fbc) userData.fbc = fbc;
   if (fbp) userData.fbp = fbp;
-  if (geo?.city) userData.city = geo.city;
-  if (geo?.state) userData.state = geo.state;
-  if (geo?.country) userData.country = geo.country;
 
-  // Fire Lead for each pixel explicitly (fbq with multiple pixel IDs)
+  const eventId = `lead_${externalId}_${Date.now()}`;
   PIXEL_IDS.forEach((pixelId) => {
     fbq('trackSingle', pixelId, 'Lead', {
       value: 15.90,
       currency: 'USD',
       content_name: 'Metodo Vibracion del Amor',
-    }, { eventID: `lead_${externalId}_${Date.now()}` });
+    }, { eventID: eventId });
   });
 
-  // Also send user_data via a custom event for server-side enrichment
+  // Do not delay the conversion event while waiting for the geolocation service.
+  const geo = await getGeolocation();
+  if (geo?.city) userData.city = geo.city;
+  if (geo?.state) userData.state = geo.state;
+  if (geo?.country) userData.country = geo.country;
   fbq('trackCustom', 'LeadUserData', userData);
 }
 
