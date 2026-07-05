@@ -23,6 +23,29 @@ import { trackLead } from './tracking';
 
 const HOTMART_URL = 'https://pay.hotmart.com/B106469520T?checkoutMode=10';
 
+const HERO_TESTIMONIALS = [
+  { name: 'Valeria R.', text: 'Empecé sin muchas expectativas, pero después de unos días sentí que tenía un momento solo para mí. Hoy me siento mucho más tranquila y con otra actitud frente a mi vida.' },
+  { name: 'Camila M.', text: 'Lo que más me gustó fue la rutina. Escuchar los audios por la mañana y antes de dormir se convirtió en mi momento favorito del día.' },
+  { name: 'Daniela P.', text: 'Después de terminar los 30 días siento que recuperé mucha confianza en mí misma. Fue una experiencia muy bonita.' },
+  { name: 'Mariana G.', text: 'Pensé que sería un programa más, pero terminó siendo una experiencia que realmente disfruté. Me ayudó a dedicarme tiempo cada día.' },
+  { name: 'Natalia C.', text: "Me encantó lo fácil que es seguir el programa. Solo presionaba 'Play' y disfrutaba de unos minutos para mí." },
+  { name: 'Andrea L.', text: 'Lo mejor fue volver a sentir paz. Hacía mucho tiempo que no tenía una rutina que me ayudara a desconectarme del estrés.' },
+  { name: 'Fernanda V.', text: 'Las frecuencias se convirtieron en parte de mi rutina diaria. Me hacían sentir más relajada y mucho más conectada conmigo.' },
+  { name: 'Paula S.', text: 'Empecé por curiosidad y terminé recomendándoselo a una amiga. Es una experiencia muy agradable.' },
+  { name: 'Gabriela T.', text: 'Me gustó muchísimo la organización del programa. Todo está explicado de forma sencilla y es muy fácil de seguir.' },
+  { name: 'Lucía H.', text: 'Cada audio era un pequeño momento para respirar y bajar el ritmo del día. Eso marcó una gran diferencia para mí.' },
+  { name: 'Patricia D.', text: 'No imaginaba que dedicar unos minutos al día pudiera hacerme sentir tan bien. Hoy es parte de mi rutina.' },
+  { name: 'Karina O.', text: 'Sentí que volví a priorizarme. A veces olvidamos lo importante que es cuidar de nuestro bienestar emocional.' },
+  { name: 'Alejandra N.', text: 'Lo recomiendo especialmente a quienes sienten que necesitan reconectar consigo mismas. Me hizo mucho bien.' },
+  { name: 'Verónica A.', text: 'Es una experiencia muy relajante. Escuchar los audios antes de dormir me ayudó a terminar el día con mucha más calma.' },
+  { name: 'Rosa M.', text: 'Lo que más valoro es que no requiere mucho tiempo. En pocos minutos sentía que estaba haciendo algo positivo por mí.' },
+  { name: 'Carolina F.', text: 'Después de varias semanas me sentía mucho más optimista y con otra energía para afrontar mi día.' },
+  { name: 'Beatriz I.', text: 'Fue un regalo para mí misma. Necesitaba volver a sentirme bien y encontré una rutina que realmente disfruté.' },
+  { name: 'Claudia E.', text: 'Me sorprendió la calidad de los audios y lo sencillo que resulta seguir todo el programa.' },
+  { name: 'Adriana J.', text: 'Había probado muchas cosas antes, pero esta fue la primera vez que conseguí mantener una rutina durante 30 días.' },
+  { name: 'Mónica Z.', text: 'Si estás buscando una forma de dedicarte unos minutos al día y reconectar contigo misma, vale completamente la pena.' },
+];
+
 // ─── Video Progress State (shared via localStorage) ─────────────
 const STORAGE_KEY = 'vdl_video_progress';
 
@@ -126,6 +149,7 @@ function Hero({
   const [cta1Visible, setCta1Visible] = useState(videoProgress >= 30);
   const [cta2Visible, setCta2Visible] = useState(videoProgress >= 60);
   const [offerVisible, setOfferVisible] = useState(videoProgress >= 90);
+  const [heroTestimonial, setHeroTestimonial] = useState(0);
   const playerInitialized = useRef(false);
 
   // Sync CTA visibility from stored progress
@@ -134,6 +158,13 @@ function Hero({
     setCta2Visible(videoProgress >= 60);
     setOfferVisible(videoProgress >= 90);
   }, [videoProgress]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setHeroTestimonial(current => (current + 1) % HERO_TESTIMONIALS.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Initialize ConverteAI SmartPlayer tracking
   useEffect(() => {
@@ -344,16 +375,41 @@ function Hero({
             </div>
           </div>
 
-          {/* Trust indicators */}
-          <div className="mt-8 text-center">
-            <div className="flex items-center justify-center gap-1 mb-2">
+          {/* Automatic testimonial carousel */}
+          <div className="mt-8 text-center max-w-2xl mx-auto">
+            <div className="flex items-center justify-center gap-1 mb-3" aria-label="5 de 5 estrellas">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
               ))}
             </div>
-            <p className="text-sm text-muted">
+            <div className="overflow-hidden">
+              <div
+                className="flex transition-transform duration-700 ease-in-out"
+                style={{ transform: `translateX(-${heroTestimonial * 100}%)` }}
+              >
+                {HERO_TESTIMONIALS.map(testimonial => (
+                  <figure key={testimonial.name} className="w-full shrink-0 px-3 min-h-36 flex flex-col items-center justify-center">
+                    <blockquote className="text-dark/80 text-base sm:text-lg leading-relaxed italic">
+                      “{testimonial.text}”
+                    </blockquote>
+                    <figcaption className="mt-3 font-heading font-bold text-dark">— {testimonial.name}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+            <p className="text-sm text-muted mt-3">
               Mas de <strong className="text-dark">5.000 mujeres</strong> ya han iniciado esta experiencia
             </p>
+            <div className="flex justify-center gap-1.5 mt-4" aria-hidden="true">
+              {HERO_TESTIMONIALS.map((testimonial, index) => (
+                <span
+                  key={testimonial.name}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    index === heroTestimonial ? 'w-5 bg-primary-500' : 'w-1.5 bg-primary-200'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>
