@@ -1,5 +1,4 @@
-// Facebook Pixel tracking utilities — captures fbc, fbp, external_id, geolocation
-// and fires the Lead event on CTA clicks across all 3 pixels.
+// Meta Pixel + Conversions API tracking with browser/server deduplication.
 
 const PIXEL_IDS = ['457573061386079', '280093672683803', '3419148448260520'];
 
@@ -9,7 +8,7 @@ function getCookie(name: string): string | null {
 }
 
 function getFbc(): string | undefined {
-  // fbc = fb.1.<timestamp>.<fbp_value> — Facebook's click ID from URL or cookie
+  // fbc = fb.1.<timestamp>.<fbclid>
   const urlParams = new URLSearchParams(window.location.search);
   const fbclid = urlParams.get('fbclid');
   if (fbclid) {
@@ -41,56 +40,64 @@ function getExternalId(): string {
   return id;
 }
 
-async function getGeolocation(): Promise<{ city?: string; state?: string; country?: string } | undefined> {
+async function sendServerEvent(payload: {
+  eventName: 'PageView' | 'Lead';
+  eventId: string;
+  fbc?: string;
+  fbp?: string;
+  externalId: string;
+}) {
   try {
-    const res = await fetch('https://ipapi.co/json/');
-    if (!res.ok) return undefined;
-    const data = await res.json();
-    return {
-      city: data.city,
-      state: data.region,
-      country: data.country_name,
-    };
+    await fetch('/api/meta-events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        eventSourceUrl: window.location.href,
+      }),
+      keepalive: true,
+    });
   } catch {
-    return undefined;
+    // Browser Pixel remains the fallback if the server event cannot be sent.
   }
 }
 
-export async function trackLead() {
+export function trackLead() {
   const fbq = window.fbq;
-  if (!fbq) return;
-
   const fbc = getFbc();
   const fbp = getFbp();
   const externalId = getExternalId();
-  const userData: Record<string, unknown> = {
-    external_id: externalId,
-  };
-  if (fbc) userData.fbc = fbc;
-  if (fbp) userData.fbp = fbp;
+  const eventId = crypto.randomUUID
+    ? `lead_${crypto.randomUUID()}`
+    : `lead_${externalId}_${Date.now()}`;
 
-  const eventId = `lead_${externalId}_${Date.now()}`;
-  PIXEL_IDS.forEach((pixelId) => {
-    fbq('trackSingle', pixelId, 'Lead', {
-      value: 15.90,
-      currency: 'USD',
-      content_name: 'Metodo Vibracion del Amor',
-    }, { eventID: eventId });
-  });
+  if (fbq) {
+    PIXEL_IDS.forEach((pixelId) => {
+      fbq('trackSingle', pixelId, 'Lead', {
+        value: 15.90,
+        currency: 'USD',
+        content_name: 'Metodo Vibracion del Amor',
+      }, { eventID: eventId });
+    });
+  }
 
-  // Do not delay the conversion event while waiting for the geolocation service.
-  const geo = await getGeolocation();
-  if (geo?.city) userData.city = geo.city;
-  if (geo?.state) userData.state = geo.state;
-  if (geo?.country) userData.country = geo.country;
-  fbq('trackCustom', 'LeadUserData', userData);
+  void sendServerEvent({ eventName: 'Lead', eventId, fbc, fbp, externalId });
 }
 
-// Fire PageView for all 3 pixels (in case index.html pixels need re-init)
 export function trackPageView() {
   const fbq = window.fbq;
-  if (!fbq) return;
-  PIXEL_IDS.forEach((pixelId) => {
-    fbq('trackSingle', pixelId, 'PageView');
-  });
+  const fbc = getFbc();
+  const fbp = getFbp();
+  const externalId = getExternalId();
+  const eventId = crypto.randomUUID
+    ? `pageview_${crypto.randomUUID()}`
+    : `pageview_${externalId}_${Date.now()}`;
+
+  if (fbq) {
+    PIXEL_IDS.forEach((pixelId) => {
+      fbq('trackSingle', pixelId, 'PageView', {}, { eventID: eventId });
+    });
+  }
+
+  void sendServerEvent({ eventName: 'PageView', eventId, fbc, fbp, externalId });
 }
