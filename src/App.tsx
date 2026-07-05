@@ -16,7 +16,6 @@ import {
   X,
   Brain,
   ArrowRight,
-  Play,
   Clock,
   Eye,
 } from 'lucide-react';
@@ -115,12 +114,21 @@ function StickyCTA({ ctaVisible }: { ctaVisible: boolean }) {
 }
 
 // ─── SECTION 1 — HERO WITH VSL (ConverteAI SmartPlayer) ──────────────────────────
-function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress: (p: number) => void }) {
+function Hero({
+  videoProgress,
+  onProgress,
+  onContentUnlock,
+}: {
+  videoProgress: number;
+  onProgress: (p: number) => void;
+  onContentUnlock: () => void;
+}) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [cta1Visible, setCta1Visible] = useState(videoProgress >= 30);
   const [cta2Visible, setCta2Visible] = useState(videoProgress >= 60);
   const [offerVisible, setOfferVisible] = useState(videoProgress >= 90);
+  const playerInitialized = useRef(false);
 
   // Sync CTA visibility from stored progress
   useEffect(() => {
@@ -131,44 +139,54 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
 
   // Initialize ConverteAI SmartPlayer tracking
   useEffect(() => {
-    const PLAYER_ID = 'vid-6a44756079ce81d83fc3a246';
+    let attempts = 0;
+    let player: SmartPlayerInstance | undefined;
+    let handleTimeUpdate: (() => void) | undefined;
+    let handleEnded: (() => void) | undefined;
 
-    const initPlayer = () => {
-      const sp = (window as any).smartplayer;
-      if (!sp) return;
-      const player = sp.instances?.[PLAYER_ID];
-      if (!player) return;
+    const timer = window.setInterval(() => {
+      attempts += 1;
+      player = window.smartplayer?.instances?.[0];
 
-      // Track progress via SmartPlayer events
-      player.on('timeupdate', (data: any) => {
-        const pct = data.percent ? data.percent * 100 : 0;
-        setCurrentTime(data.seconds || 0);
-        onProgress(pct);
-
-        if (pct >= 30 && !cta1Visible) setCta1Visible(true);
-        if (pct >= 60 && !cta2Visible) setCta2Visible(true);
-        if (pct >= 90 && !offerVisible) setOfferVisible(true);
-      });
-
-      player.on('ended', () => {
-        onProgress(100);
-      });
-
-      if (player.getDuration) {
-        player.getDuration().then((d: number) => setDuration(d));
+      if (!player?.video || playerInitialized.current) {
+        if (attempts >= 40) window.clearInterval(timer);
+        return;
       }
-    };
 
-    // SmartPlayer loads asynchronously
-    const timer = setInterval(() => {
-      if ((window as any).smartplayer) {
-        initPlayer();
-        clearInterval(timer);
-      }
+      playerInitialized.current = true;
+      window.clearInterval(timer);
+
+      handleTimeUpdate = () => {
+        if (!player?.video) return;
+
+        const seconds = player.video.currentTime || 0;
+        const videoDuration = player.video.duration || 0;
+        const percentage = videoDuration > 0 ? (seconds / videoDuration) * 100 : 0;
+
+        setCurrentTime(seconds);
+        setDuration(videoDuration);
+        onProgress(percentage);
+        if (percentage >= 30) setCta1Visible(true);
+        if (percentage >= 60) setCta2Visible(true);
+        if (percentage >= 90) setOfferVisible(true);
+        if (seconds >= 90) onContentUnlock();
+      };
+
+      handleEnded = () => onProgress(100);
+      player.on('timeupdate', handleTimeUpdate);
+      player.on('ended', handleEnded);
+      handleTimeUpdate();
     }, 500);
 
-    return () => clearInterval(timer);
-  }, [onProgress, cta1Visible, cta2Visible, offerVisible]);
+    return () => {
+      window.clearInterval(timer);
+      if (player?.off && handleTimeUpdate && handleEnded) {
+        player.off('timeupdate', handleTimeUpdate);
+        player.off('ended', handleEnded);
+        playerInitialized.current = false;
+      }
+    };
+  }, [onProgress, onContentUnlock]);
 
   const formatTime = (t: number) => {
     const m = Math.floor(t / 60);
@@ -276,12 +294,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
             <vturb-smartplayer
               id="vid-6a44756079ce81d83fc3a246"
               style={{ display: 'block', margin: '0 auto', width: '100%' }}
-            >
-              <div
-                className="vturb-player-placeholder"
-                style={{ position: 'relative', width: '100%', paddingTop: '75%', zIndex: 0, backgroundColor: 'black' }}
-              />
-            </vturb-smartplayer>
+            />
           </div>
 
           {/* Progress bar below video */}
@@ -356,7 +369,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
           </div>
 
           {/* Trust indicators */}
-          <div className="mt-8 text-center animate-fade-up animate-delay-500">
+          <div className="mt-8 text-center">
             <div className="flex items-center justify-center gap-1 mb-2">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
@@ -1075,18 +1088,24 @@ function Footer() {
 // ─── MAIN APP ────────────────────────────────────────────────────
 function App() {
   const { progress, updateProgress } = useVideoProgress();
+  const [contentVisible, setContentVisible] = useState(false);
+  const unlockContent = useCallback(() => setContentVisible(true), []);
 
   return (
     <div className="min-h-screen bg-rose-25">
-      <Hero videoProgress={progress} onProgress={updateProgress} />
-      <Problem />
-      <HowItWorks />
-      <Journey />
-      <Testimonials />
-      <WhatYouReceive />
-      <Offer />
-      <FAQ />
-      <Footer />
+      <Hero videoProgress={progress} onProgress={updateProgress} onContentUnlock={unlockContent} />
+      {contentVisible && (
+        <>
+          <Problem />
+          <HowItWorks />
+          <Journey />
+          <Testimonials />
+          <WhatYouReceive />
+          <Offer />
+          <FAQ />
+          <Footer />
+        </>
+      )}
       <StickyCTA ctaVisible={progress >= 30} />
     </div>
   );
