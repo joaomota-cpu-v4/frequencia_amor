@@ -114,13 +114,20 @@ function StickyCTA({ ctaVisible }: { ctaVisible: boolean }) {
 }
 
 // ─── SECTION 1 — HERO WITH VSL (ConverteAI SmartPlayer) ──────────────────────────
-function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress: (p: number) => void }) {
+function Hero({
+  videoProgress,
+  onProgress,
+  onContentUnlock,
+}: {
+  videoProgress: number;
+  onProgress: (p: number) => void;
+  onContentUnlock: () => void;
+}) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [cta1Visible, setCta1Visible] = useState(videoProgress >= 30);
   const [cta2Visible, setCta2Visible] = useState(videoProgress >= 60);
   const [offerVisible, setOfferVisible] = useState(videoProgress >= 90);
-  const [socialProofVisible, setSocialProofVisible] = useState(false);
   const playerInitialized = useRef(false);
 
   // Sync CTA visibility from stored progress
@@ -129,10 +136,6 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
     setCta2Visible(videoProgress >= 60);
     setOfferVisible(videoProgress >= 90);
   }, [videoProgress]);
-
-  useEffect(() => {
-    setSocialProofVisible(currentTime >= 90);
-  }, [currentTime]);
 
   // Initialize ConverteAI SmartPlayer tracking
   useEffect(() => {
@@ -166,7 +169,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
         if (percentage >= 30) setCta1Visible(true);
         if (percentage >= 60) setCta2Visible(true);
         if (percentage >= 90) setOfferVisible(true);
-        if (seconds >= 90) setSocialProofVisible(true);
+        if (seconds >= 90) onContentUnlock();
       };
 
       handleEnded = () => onProgress(100);
@@ -183,7 +186,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
         playerInitialized.current = false;
       }
     };
-  }, [onProgress]);
+  }, [onProgress, onContentUnlock]);
 
   const formatTime = (t: number) => {
     const m = Math.floor(t / 60);
@@ -366,11 +369,7 @@ function Hero({ videoProgress, onProgress }: { videoProgress: number; onProgress
           </div>
 
           {/* Trust indicators */}
-          <div
-            className={`mt-8 text-center transition-all duration-700 ${
-              socialProofVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
-            }`}
-          >
+          <div className="mt-8 text-center">
             <div className="flex items-center justify-center gap-1 mb-2">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
@@ -1089,18 +1088,24 @@ function Footer() {
 // ─── MAIN APP ────────────────────────────────────────────────────
 function App() {
   const { progress, updateProgress } = useVideoProgress();
+  const [contentVisible, setContentVisible] = useState(false);
+  const unlockContent = useCallback(() => setContentVisible(true), []);
 
   return (
     <div className="min-h-screen bg-rose-25">
-      <Hero videoProgress={progress} onProgress={updateProgress} />
-      <Problem />
-      <HowItWorks />
-      <Journey />
-      <Testimonials />
-      <WhatYouReceive />
-      <Offer />
-      <FAQ />
-      <Footer />
+      <Hero videoProgress={progress} onProgress={updateProgress} onContentUnlock={unlockContent} />
+      {contentVisible && (
+        <>
+          <Problem />
+          <HowItWorks />
+          <Journey />
+          <Testimonials />
+          <WhatYouReceive />
+          <Offer />
+          <FAQ />
+          <Footer />
+        </>
+      )}
       <StickyCTA ctaVisible={progress >= 30} />
     </div>
   );
