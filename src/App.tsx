@@ -318,8 +318,10 @@ function Hero({
 
           {/* CTA 1 — fades in at 30% */}
           <div
-            className={`mt-8 transition-all duration-700 ${
-              cta1Visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+            className={`transition-all duration-700 overflow-hidden ${
+              cta1Visible
+                ? 'mt-8 opacity-100 translate-y-0 max-h-28'
+                : 'mt-0 opacity-0 translate-y-4 max-h-0 pointer-events-none'
             }`}
           >
             <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackLead()} className="btn-primary text-lg px-10 py-5 w-full sm:w-auto inline-flex justify-center">
@@ -332,8 +334,10 @@ function Hero({
 
           {/* CTA 2 — fades in at 60% */}
           <div
-            className={`mt-4 transition-all duration-700 ${
-              cta2Visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+            className={`transition-all duration-700 overflow-hidden ${
+              cta2Visible
+                ? 'mt-4 opacity-100 translate-y-0 max-h-16'
+                : 'mt-0 opacity-0 translate-y-4 max-h-0 pointer-events-none'
             }`}
           >
             <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackLead()} className="inline-flex items-center gap-2 text-primary-500 font-heading font-semibold hover:text-primary-700 transition-colors text-base">
@@ -344,8 +348,10 @@ function Hero({
 
           {/* Offer card — revealed at 90% */}
           <div
-            className={`mt-8 transition-all duration-700 ${
-              offerVisible ? 'opacity-100 translate-y-0 max-h-[500px]' : 'opacity-0 translate-y-4 max-h-0 pointer-events-none overflow-hidden'
+            className={`transition-all duration-700 overflow-hidden ${
+              offerVisible
+                ? 'mt-8 opacity-100 translate-y-0 max-h-[500px]'
+                : 'mt-0 opacity-0 translate-y-4 max-h-0 pointer-events-none'
             }`}
           >
             <div className="bg-white rounded-2xl p-6 md:p-8 border border-primary-200/60 shadow-xl shadow-primary-500/10">
@@ -376,7 +382,7 @@ function Hero({
           </div>
 
           {/* Automatic testimonial carousel */}
-          <div className="mt-8 text-center max-w-2xl mx-auto">
+          <div className="mt-5 text-center max-w-2xl mx-auto">
             <div className="flex items-center justify-center gap-1 mb-3" aria-label="5 de 5 estrellas">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
