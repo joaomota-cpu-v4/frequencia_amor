@@ -123,8 +123,6 @@ function Hero({
   onProgress: (p: number) => void;
   onContentUnlock: () => void;
 }) {
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [cta1Visible, setCta1Visible] = useState(videoProgress >= 30);
   const [cta2Visible, setCta2Visible] = useState(videoProgress >= 60);
   const [offerVisible, setOfferVisible] = useState(videoProgress >= 90);
@@ -163,8 +161,6 @@ function Hero({
         const videoDuration = player.video.duration || 0;
         const percentage = videoDuration > 0 ? (seconds / videoDuration) * 100 : 0;
 
-        setCurrentTime(seconds);
-        setDuration(videoDuration);
         onProgress(percentage);
         if (percentage >= 30) setCta1Visible(true);
         if (percentage >= 60) setCta2Visible(true);
@@ -187,14 +183,6 @@ function Hero({
       }
     };
   }, [onProgress, onContentUnlock]);
-
-  const formatTime = (t: number) => {
-    const m = Math.floor(t / 60);
-    const s = Math.floor(t % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
     <section className="relative overflow-hidden">
@@ -245,13 +233,13 @@ function Hero({
                 </h3>
                 <p className="text-dark/80 leading-relaxed text-sm md:text-base mb-4">
                   Antes de comenzar tu experiencia de 30 dias, mira esta breve presentacion.
-                  En menos de 5 minutos descubriras como funciona el Metodo Vibracion del Amor™
+                  En menos de 4 minutos descubriras como funciona el Metodo Vibracion del Amor™
                   y por que miles de mujeres utilizan frecuencias sonoras para elevar su vibracion amorosa.
                 </p>
                 <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-dark/70">
                   <span className="flex items-center gap-1.5">
                     <Clock className="w-4 h-4 text-primary-500" />
-                    Duracion: aproximadamente 5 minutos
+                    Duracion: aproximadamente 4 minutos
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Heart className="w-4 h-4 text-primary-500" />
@@ -281,7 +269,7 @@ function Hero({
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-primary-100 text-xs font-heading font-semibold text-dark">
               <Clock className="w-3.5 h-3.5 text-primary-500" />
-              5 Minutos
+              4 Minutos
             </span>
           </div>
 
@@ -295,18 +283,6 @@ function Hero({
               id="vid-6a44756079ce81d83fc3a246"
               style={{ display: 'block', margin: '0 auto', width: '100%' }}
             />
-          </div>
-
-          {/* Progress bar below video */}
-          <div className="mt-3 flex items-center gap-3">
-            <span className="text-xs text-muted font-medium tabular-nums">{formatTime(currentTime)}</span>
-            <div className="flex-1 h-1.5 bg-primary-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-primary-400 to-primary-500 rounded-full transition-[width] duration-300"
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
-            <span className="text-xs text-muted font-medium tabular-nums">{formatTime(duration)}</span>
           </div>
 
           {/* CTA 1 — fades in at 30% */}
